@@ -5,7 +5,7 @@ import numpy as np
 from tensorflow import keras as ks
 import openpyxl
 
-
+#取Channel use data
 ChannelFile = openpyxl.load_workbook("EU_marker_channel_mapping.xlsx",data_only = True)
 s1=ChannelFile.active
 Usecolumn = s1["B"]
@@ -15,6 +15,7 @@ for NumA in range(1,len(Usecolumn)):
     if Usecolumn[NumA].value == 1:
         ChannelList.append(ChannelColumn[NumA].value)
 
+#取LabData
 ResuleFile = openpyxl.load_workbook("EU_label.xlsx",data_only = True)
 s2=ResuleFile.active
 Resultcolumn = s2["B"]
@@ -22,7 +23,7 @@ Result= []
 for NumA in range(1,len(Resultcolumn)):
     Result.append(Resultcolumn[NumA].value)
 
-
+#取測試資料
 FCSDir = os.listdir("raw_fcs/")
 OutputDate = np.zeros((len(FCSDir)))
 Size=["0"]
@@ -31,7 +32,7 @@ for NumA in range(len(FCSDir)):
         OutputDate[NumA]= 0.0
     elif Result[NumA]=="Sick":
         OutputDate[NumA]= 1.0
-
+#受訓資料建構
 for NumA in range(len(FCSDir)):
     FCSfiles = os.listdir("raw_fcs/"+FCSDir[0]+"/")
 
@@ -42,10 +43,12 @@ for NumA in range(len(FCSDir)):
 
     for NumB in range(len(ChannelList)):
         InputDate[NumA,NumB,:] = Data[:,ChannelList[NumB]]
-#print(InputDate[0])
 
+#資料歸一化
 InputDate=InputDate/1000000.0
-print(InputDate)
+#print(InputDate)
+
+#設定訓練層ML
 model = ks.Sequential([
     ks.layers.Flatten(input_shape=(len(ChannelList),Size[0])),
     ks.layers.Dense(8, activation='relu'),
@@ -55,9 +58,12 @@ model = ks.Sequential([
 model.compile(optimizer='adam',
               loss=ks.losses.SparseCategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
+#訓練
 model.fit(InputDate, OutputDate, epochs=10)
-test_loss, test_acc = model.evaluate(InputDate, OutputDate, verbose=2)
-print(test_loss, test_acc)
+#test_loss, test_acc = model.evaluate(InputDate, OutputDate, verbose=2)
+#print(test_loss, test_acc)
+
+#預測
 probability_model = ks.Sequential([model,ks.layers.Softmax()])
 predictions = probability_model.predict(InputDate)
 print(predictions)
